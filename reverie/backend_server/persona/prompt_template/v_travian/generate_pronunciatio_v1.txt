@@ -1,0 +1,10 @@
+generate_pronunciatio_v1.txt
+
+Variables:
+!<INPUT 0>! -- Action description (a Travian bot manager action, e.g., "sending lumber to the capital village", "training Legionnaires in the barracks", "scanning for incoming attacks")
+
+<commentblockmarker>###</commentblockmarker>
+Convert a Travian bot manager action description to an emoji (important: use two or less emojis). Choose from Travian-relevant symbols: resources (🪵🧱⛏️🌾), military (⚔️🛡️🏹🗡️), buildings (🏗️🏰🏛️🗼), trade (💰🪙🚶), intelligence (🔭👁️📡), construction (🔨⚙️📋), attack/dodge (💨🚨🏃), diplomacy (🤝💬).
+
+Action description: !<INPUT 0>!
+Emoji:

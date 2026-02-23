@@ -1,0 +1,38 @@
+task_decomp_v3.txt
+
+Variables:
+!<INPUT 0>! -- Commonset (agent identity: name, role, village assignment, personality)
+!<INPUT 1>! -- Surrounding schedule description (other phases running before/after this one)
+!<INPUT 2>! -- Persona first name (manager name, e.g., "BuildManager")
+!<INPUT 3>! -- Persona first name (same, used as subject, e.g., "BuildManager")
+!<INPUT 4>! -- Current action (the bot phase being decomposed, e.g., "executing the village build queue for Axeville")
+!<INPUT 5>! -- curr time range (e.g., "09:00 am ~ 10:00 am")
+!<INPUT 6>! -- Current action duration in min
+!<INPUT 7>! -- Persona first name (used to start each subtask line)
+
+<commentblockmarker>###</commentblockmarker>
+Describe Travian bot manager subtasks in 5 min increments.
+---
+Name: ResourceManager
+Role: Monitors and balances resources across all assigned villages
+Village assignment: Main capital (Axeville) plus 3 feeder villages
+Personality: methodical, data-driven, cautious
+Currently: ResourceManager oversees lumber, clay, iron, and crop flows. It checks warehouse capacities, calculates deficits, and dispatches merchant caravans between villages to prevent overflows and shortfalls.
+Daily plan requirement: ResourceManager is scheduled to run inter-village resource balancing during the morning cycle and NPC trade top-ups during the afternoon cycle.
+
+Today is Monday Feb 23. From 08:00 am ~ 09:00 am, ResourceManager is planning on running the preflight stats scan, from 09:00 am ~ 10:30 am, ResourceManager is planning on executing inter-village resource transfers, and from 10:30 am ~ 11:00 am, ResourceManager is planning on logging transfer results and updating bot_state.
+In 5 min increments, list the subtasks ResourceManager does when ResourceManager is executing inter-village resource transfers from 09:00 am ~ 10:30 am (total duration in minutes: 90):
+1) ResourceManager is reading current warehouse fill levels for all villages from the preflight scan cache. (duration in minutes: 10, minutes left: 80)
+2) ResourceManager is calculating per-village resource surplus and deficit against configured thresholds. (duration in minutes: 10, minutes left: 70)
+3) ResourceManager is checking merchant availability at the capital marketplace. (duration in minutes: 5, minutes left: 65)
+4) ResourceManager is dispatching a lumber caravan from Feeder-1 to Axeville. (duration in minutes: 10, minutes left: 55)
+5) ResourceManager is waiting for the send-resources page to confirm the caravan was accepted. (duration in minutes: 5, minutes left: 50)
+6) ResourceManager is dispatching a clay caravan from Feeder-2 to Axeville. (duration in minutes: 10, minutes left: 40)
+7) ResourceManager is checking if Axeville crop balance requires NPC trade intervention. (duration in minutes: 10, minutes left: 30)
+8) ResourceManager is executing NPC trade at the capital marketplace to convert surplus resources into crop. (duration in minutes: 15, minutes left: 15)
+9) ResourceManager is verifying post-trade warehouse levels and writing the transfer summary to bot_state.json. (duration in minutes: 15, minutes left: 0)
+---
+!<INPUT 0>!
+!<INPUT 1>!
+In 5 min increments, list the subtasks !<INPUT 2>! does when !<INPUT 3>! is !<INPUT 4>! from !<INPUT 5>! (total duration in minutes !<INPUT 6>!):
+1) !<INPUT 7>! is

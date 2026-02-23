@@ -1,0 +1,19 @@
+{
+  "fork_sim_code": "base_travian_hq",
+  "start_date": "February 23, 2026",
+  "curr_time": "February 23, 2026, 00:00:00",
+  "sec_per_step": 10,
+  "maze_name": "travian_hq",
+  "persona_names": [
+    "Commander Marcus",
+    "Archivist Petra",
+    "Scout Varro",
+    "Treasurer Lucius",
+    "Builder Gaius",
+    "Centurion Titus",
+    "Strategist Livia",
+    "Sentinel Felix",
+    "Validator Quintus"
+  ],
+  "step": 0
+}

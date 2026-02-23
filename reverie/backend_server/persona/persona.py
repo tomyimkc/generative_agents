@@ -28,7 +28,7 @@ from persona.cognitive_modules.execute import *
 from persona.cognitive_modules.converse import *
 
 class Persona: 
-  def __init__(self, name, folder_mem_saved=False):
+  def __init__(self, name, folder_mem_saved=None):
     # PERSONA BASE STATE 
     # <name> is the full name of the persona. This is a unique identifier for
     # the persona within Reverie. 
@@ -38,6 +38,8 @@ class Persona:
     # If there is already memory in folder_mem_saved, we load that. Otherwise,
     # we create new memory instances. 
     # <s_mem> is the persona's spatial memory. 
+    if folder_mem_saved is None:
+      folder_mem_saved = ""
     f_s_mem_saved = f"{folder_mem_saved}/bootstrap_memory/spatial_memory.json"
     self.s_mem = MemoryTree(f_s_mem_saved)
     # <s_mem> is the persona's associative memory. 
@@ -234,7 +236,6 @@ class Persona:
   def open_convo_session(self, convo_mode): 
     open_convo_session(self, convo_mode)
     
-
 
 
 

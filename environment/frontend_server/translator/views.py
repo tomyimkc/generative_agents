@@ -117,7 +117,7 @@ def home(request):
   with open(f_curr_step) as json_file:  
     step = json.load(json_file)["step"]
 
-  os.remove(f_curr_step)
+  # os.remove(f_curr_step) # Removed to allow multiple refreshes
 
   persona_names = []
   persona_names_set = set()
@@ -295,15 +295,15 @@ def update_environment(request):
   return JsonResponse(response_data)
 
 
-def path_tester_update(request): 
+def path_tester_update(request):
   """
-  Processing the path and saving it to path_tester_env.json temp storage for 
-  conducting the path tester. 
+  Processing the path and saving it to path_tester_env.json temp storage for
+  conducting the path tester.
 
   ARGS:
     request: Django request
-  RETURNS: 
-    HttpResponse: string confirmation message. 
+  RETURNS:
+    HttpResponse: string confirmation message.
   """
   data = json.loads(request.body)
   camera = data["camera"]
@@ -312,6 +312,22 @@ def path_tester_update(request):
     outfile.write(json.dumps(camera, indent=2))
 
   return HttpResponse("received")
+
+
+def travian_state_api(request):
+  """
+  API endpoint that serves the Travian Bot's bot_state.json for the
+  Travian HQ status overlay panel.
+  """
+  bot_state_path = "/Users/tomyimkc/Documents/GitHub/Travian_Bot/bot_state.json"
+  try:
+    with open(bot_state_path) as f:
+      state = json.load(f)
+    return JsonResponse(state)
+  except FileNotFoundError:
+    return JsonResponse({"error": "bot_state.json not found", "meta": {"running": False, "phase": "offline"}})
+  except json.JSONDecodeError:
+    return JsonResponse({"error": "Invalid JSON in bot_state.json"})
 
 
 

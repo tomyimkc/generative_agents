@@ -34,6 +34,7 @@ from global_methods import *
 from utils import *
 from maze import *
 from persona.persona import *
+from travian_bridge import TravianBridge
 
 ##############################################################################
 #                                  REVERIE                                   #
@@ -132,9 +133,17 @@ class ReverieServer:
       self.maze.tiles[p_y][p_x]["events"].add(curr_persona.scratch
                                               .get_curr_event_and_desc())
 
-    # REVERIE SETTINGS PARAMETERS:  
+    # TRAVIAN BRIDGE: connects to Travian Bot state for driving persona behavior
+    self.travian_bridge = TravianBridge()
+    self.travian_bridge.poll()  # Initial state load
+    if self.travian_bridge.is_running():
+      print(f"[TRAVIAN] Bot is running — phase: {self.travian_bridge.get_phase()}")
+    else:
+      print("[TRAVIAN] Bot is offline — personas will operate autonomously")
+
+    # REVERIE SETTINGS PARAMETERS:
     # <server_sleep> denotes the amount of time that our while loop rests each
-    # cycle; this is to not kill our machine. 
+    # cycle; this is to not kill our machine.
     self.server_sleep = 0.1
 
     # SIGNALING THE FRONTEND SERVER: 
@@ -276,6 +285,80 @@ class ReverieServer:
       time.sleep(self.server_sleep * 10)
 
 
+
+  def check_kanban_board(self, persona):
+    import os
+    import json
+    kanban_path = "/Users/tomyimkc/Documents/GitHub/Travian_Bot/kanban_board.json"
+    if not os.path.exists(kanban_path):
+        return False
+        
+    # Only developers should check the board
+    if "Manager" in persona.name or "Klaus" in persona.name:
+        return False
+        
+    # If they already have a task, don't assign a new one
+    if hasattr(persona.scratch, 'pending_code_task') and persona.scratch.pending_code_task:
+        return False
+        
+    try:
+        with open(kanban_path, "r") as f:
+            board = json.load(f)
+            
+        if board.get("TODO") and len(board["TODO"]) > 0:
+            # Pick the first task
+            task = board["TODO"].pop(0)
+            task["assignee"] = persona.name
+            board.setdefault("IN_PROGRESS", []).append(task)
+            
+            # Save the board
+            with open(kanban_path, "w") as f:
+                json.dump(board, f, indent=2)
+                
+            task_desc = f"[{task['id']}] {task['title']}: {task['description']}"
+            
+            # Handle Pair Programming
+            is_pair = task.get("pair_programming", False)
+            pair_partner = task.get("pair_partner", "Maria Lopez" if persona.name == "Isabella Rodriguez" else "Isabella Rodriguez")
+            
+            if is_pair and pair_partner in self.personas:
+                print(f"\n[PAIR PROGRAMMING] {persona.name} is initiating a pair programming session with {pair_partner}!")
+                persona.scratch.pending_pair_task = task_desc
+                persona.scratch.pair_partner = pair_partner
+                persona.scratch.pending_task_id = task["id"]
+                
+                thought = f"I picked up a complex task from the Kanban board: {task_desc}. I must find {pair_partner} immediately to discuss the architecture before I write the code."
+                from persona.cognitive_modules.converse import load_history_via_whisper
+                load_history_via_whisper(self.personas, [[persona.name, thought]])
+                
+                curr_idx = persona.scratch.get_f_daily_schedule_index()
+                if curr_idx < len(persona.scratch.f_daily_schedule):
+                    persona.scratch.f_daily_schedule[curr_idx][0] = f"finding {pair_partner} to discuss the architecture for the task: {task_desc}"
+                    persona.scratch.act_start_time = persona.scratch.curr_time
+                    persona.scratch.act_description = f"finding {pair_partner} to discuss the architecture for the task: {task_desc}"
+            else:
+                print(f"\n[KANBAN] {persona.name} proactively picked up task: {task_desc}")
+                
+                # Force them to think about this task immediately
+                thought = f"I just checked the Kanban board and picked up a new task: {task_desc}. I must immediately go to my desk and write code for this."
+                from persona.cognitive_modules.converse import load_history_via_whisper
+                load_history_via_whisper(self.personas, [[persona.name, thought]])
+                
+                # Store the task in scratch so the execution hook can find it
+                persona.scratch.pending_code_task = task_desc
+                persona.scratch.pending_task_id = task["id"]
+                
+                # OVERRIDE CURRENT ACTION
+                curr_idx = persona.scratch.get_f_daily_schedule_index()
+                if curr_idx < len(persona.scratch.f_daily_schedule):
+                    persona.scratch.f_daily_schedule[curr_idx][0] = f"coding the task: {task_desc}"
+                    persona.scratch.act_start_time = persona.scratch.curr_time
+                    persona.scratch.act_description = f"coding the task: {task_desc}"
+            return True
+    except Exception as e:
+        print(f"[KANBAN] Error checking board: {e}")
+    return False
+
   def start_server(self, int_counter): 
     """
     The main backend server of Reverie. 
@@ -314,8 +397,10 @@ class ReverieServer:
       # the content of this for loop. Otherwise, we just wait. 
       curr_env_file = f"{sim_folder}/environment/{self.step}.json"
       if check_if_file_exists(curr_env_file):
-        # If we have an environment file, it means we have a new perception
-        # input to our personas. So we first retrieve it.
+      # If we have an environment file, it means we have a new perception
+      # input to our personas. So we first retrieve it.
+        env_retrieved = False
+        new_env = None
         try: 
           # Try and save block for robustness of the while loop.
           with open(curr_env_file) as json_file:
@@ -323,8 +408,8 @@ class ReverieServer:
             env_retrieved = True
         except: 
           pass
-      
-        if env_retrieved: 
+       
+        if env_retrieved and new_env is not None: 
           # This is where we go through <game_obj_cleanup> to clean up all 
           # object actions that were used in this cylce. 
           for key, val in game_obj_cleanup.items(): 
@@ -364,20 +449,59 @@ class ReverieServer:
                        None, None, None)
               self.maze.remove_event_from_tile(blank, new_tile)
 
+          # ── TRAVIAN BRIDGE: inject bot state before persona cognition ──
+          bridge_state = self.travian_bridge.poll()
+          if bridge_state:
+            # Phase changed — inject events as persona memories
+            if self.travian_bridge.has_phase_changed():
+              phase = self.travian_bridge.get_phase()
+              active_persona, target_arena = self.travian_bridge.get_active_persona()
+              print(f"  [TRAVIAN] Phase → {phase} | Active: {active_persona} → {target_arena}")
+
+              # Inject phase change as a thought for the commander
+              phase_desc = self.travian_bridge.get_phase_description()
+              if "Commander Marcus" in self.personas:
+                from persona.cognitive_modules.converse import load_history_via_whisper
+                load_history_via_whisper(self.personas,
+                  [["Commander Marcus", phase_desc]])
+
+            # Inject new bot events as persona memories
+            new_events = self.travian_bridge.consume_new_events()
+            if new_events:
+              from persona.cognitive_modules.converse import load_history_via_whisper
+              whispers = []
+              for event in new_events[:5]:  # Cap at 5 per step to avoid flooding
+                persona_name_for_event, thought = self.travian_bridge.event_to_thought(event)
+                if persona_name_for_event in self.personas:
+                  whispers.append([persona_name_for_event, thought])
+              if whispers:
+                load_history_via_whisper(self.personas, whispers)
+                print(f"  [TRAVIAN] Injected {len(whispers)} event memories")
+
+          # Override active persona's action description with bot context
+          if self.travian_bridge.is_running():
+            active_p, target_a = self.travian_bridge.get_active_persona()
+            if active_p in self.personas:
+              persona_obj = self.personas[active_p]
+              phase_desc = self.travian_bridge.get_phase_description()
+              # Update act_description so the persona "narrates" what the bot does
+              if persona_obj.scratch.act_description is None or "idle" in str(persona_obj.scratch.act_description).lower():
+                persona_obj.scratch.act_description = phase_desc
+
           # Then we need to actually have each of the personas perceive and
           # move. The movement for each of the personas comes in the form of
           # x y coordinates where the persona will move towards. e.g., (50, 34)
-          # This is where the core brains of the personas are invoked. 
-          movements = {"persona": dict(), 
+          # This is where the core brains of the personas are invoked.
+          movements = {"persona": dict(),
                        "meta": dict()}
-          for persona_name, persona in self.personas.items(): 
+          for persona_name, persona in self.personas.items():
             # <next_tile> is a x,y coordinate. e.g., (58, 9)
             # <pronunciatio> is an emoji. e.g., "\ud83d\udca4"
-            # <description> is a string description of the movement. e.g., 
-            #   writing her next novel (editing her novel) 
+            # <description> is a string description of the movement. e.g.,
+            #   writing her next novel (editing her novel)
             #   @ double studio:double studio:common room:sofa
             next_tile, pronunciatio, description = persona.move(
-              self.maze, self.personas, self.personas_tile[persona_name], 
+              self.maze, self.personas, self.personas_tile[persona_name],
               self.curr_time)
             movements["persona"][persona_name] = {}
             movements["persona"][persona_name]["movement"] = next_tile
@@ -566,6 +690,93 @@ class ReverieServer:
           for key, val in self.maze.access_tile(cooordinate).items(): 
             ret_str += f"{key}: {val}\n"
 
+        elif sim_command.lower().startswith("code_task "):
+          # Format: code_task <Agent Name> | <Task Description>
+          # Example: code_task Isabella Rodriguez | Create hello_bot.py
+          try:
+            payload = sim_command[len("code_task"):].strip()
+            if "|" not in payload:
+              ret_str += "Invalid code_task format. Use: code_task <Agent Name> | <Task Description>"
+            else:
+              agent_name, task_description = [part.strip() for part in payload.split("|", 1)]
+              if agent_name not in self.personas:
+                ret_str += f"Unknown agent name: {agent_name}"
+              else:
+                import sys
+                import os
+                import json
+                import importlib.util
+                repo_path = "/Users/tomyimkc/Documents/GitHub/Travian_Bot"
+
+                backend_path = "/Users/tomyimkc/Documents/GitHub/generative_agents/reverie/backend_server"
+                if backend_path not in sys.path:
+                  sys.path.append(backend_path)
+
+                # Robust import for build_codebase_context.py from repo_path
+                build_context = None
+                build_context_path = os.path.join(repo_path, "build_codebase_context.py")
+                if os.path.exists(build_context_path):
+                  spec = importlib.util.spec_from_file_location("build_codebase_context", build_context_path)
+                  if spec is None or spec.loader is None:
+                    raise ImportError(f"Could not load module spec from {build_context_path}")
+                  module = importlib.util.module_from_spec(spec)
+                  spec.loader.exec_module(module)
+                  build_context = getattr(module, "build_context", None)
+                if build_context is None:
+                  raise ImportError(f"Could not load build_context from {build_context_path}")
+                from persona.prompt_template.gpt_structure import generate_code_task
+
+                print(f"[SIM-TO-CODE] Building context for repo: {repo_path}")
+                context = build_context(repo_path)
+                print(f"[SIM-TO-CODE] Generating code for task: {task_description}")
+                code_results = generate_code_task(context, task_description, repo_path=repo_path)
+
+                # Write files to disk
+                written_files = []
+                for file_obj in code_results:
+                  filename = file_obj.get("filename")
+                  code = file_obj.get("code")
+                  if not filename or code is None:
+                    continue
+                  filepath = os.path.join(repo_path, filename)
+                  dir_path = os.path.dirname(filepath)
+                  if dir_path and not os.path.exists(dir_path):
+                    os.makedirs(dir_path, exist_ok=True)
+                  with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(code)
+                  written_files.append(filename)
+
+                # Update Kanban if this task came from the board
+                task_id = None
+                persona = self.personas[agent_name]
+                if hasattr(persona.scratch, "pending_task_id") and persona.scratch.pending_task_id:
+                  task_id = persona.scratch.pending_task_id
+                elif task_description.startswith("[") and "]" in task_description:
+                  task_id = task_description[1:task_description.find("]")].strip()
+
+                if task_id:
+                  kanban_path = f"{repo_path}/kanban_board.json"
+                  if os.path.exists(kanban_path):
+                    with open(kanban_path, "r") as f:
+                      board = json.load(f)
+                    moved_task = None
+                    for col in ["IN_PROGRESS", "TODO"]:
+                      for idx, task in enumerate(board.get(col, [])):
+                        if task.get("id") == task_id:
+                          moved_task = board[col].pop(idx)
+                          break
+                      if moved_task:
+                        break
+                    if moved_task:
+                      board.setdefault("DONE", []).append(moved_task)
+                      with open(kanban_path, "w") as f:
+                        json.dump(board, f, indent=2)
+                      print(f"[KANBAN] Moved task {task_id} to DONE")
+
+                ret_str += f"[SIM-TO-CODE] Wrote files: {', '.join(written_files) if written_files else 'none'}"
+          except Exception as e:
+            ret_str += f"[SIM-TO-CODE] Error: {e}"
+
         elif ("call -- analysis" 
               in sim_command.lower()): 
           # Starts a stateless chat session with the agent. It does not save 
@@ -610,11 +821,6 @@ if __name__ == '__main__':
 
   rs = ReverieServer(origin, target)
   rs.open_server()
-
-
-
-
-
 
 
 

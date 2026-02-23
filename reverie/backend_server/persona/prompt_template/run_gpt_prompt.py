@@ -16,7 +16,35 @@ from global_methods import *
 from persona.prompt_template.gpt_structure import *
 from persona.prompt_template.print_prompt import *
 
-def get_random_alphanumeric(i=6, j=6): 
+# Template routing: use v_travian/ variants when running the Travian HQ maze.
+# active_maze is imported from utils via gpt_structure's star import.
+def _get_template(v_default, v_travian_override):
+  """Return the appropriate prompt template path for the active maze.
+
+  When the simulation is running the travian_hq world the returned path
+  points into v_travian/ so that Travian-themed prompt text is used.
+  For all other worlds (e.g. the_ville) the original default path is kept.
+
+  Args:
+    v_default: the standard template path string (e.g.
+               "persona/prompt_template/v2/daily_planning_v6.txt")
+    v_travian_override: the v_travian path string (e.g.
+               "persona/prompt_template/v_travian/daily_planning_v6.txt")
+
+  Returns:
+    str: one of the two path strings depending on active_maze.
+  """
+  # active_maze is module-level, injected via `from gpt_structure import *`
+  # -> `from utils import *`. Default is "travian_hq".
+  try:
+    if active_maze == "travian_hq":
+      return v_travian_override
+  except NameError:
+    pass
+  return v_default
+
+
+def get_random_alphanumeric(i=6, j=6):
   """
   Returns a random alpha numeric strength that has the length of somewhere
   between i and j. 
@@ -141,7 +169,9 @@ def run_gpt_prompt_daily_plan(persona,
   gpt_param = {"engine": "text-davinci-003", "max_tokens": 500, 
                "temperature": 1, "top_p": 1, "stream": False,
                "frequency_penalty": 0, "presence_penalty": 0, "stop": None}
-  prompt_template = "persona/prompt_template/v2/daily_planning_v6.txt"
+  prompt_template = _get_template(
+    "persona/prompt_template/v2/daily_planning_v6.txt",
+    "persona/prompt_template/v_travian/daily_planning_v6.txt")
   prompt_input = create_prompt_input(persona, wake_up_hour, test_input)
   prompt = generate_prompt(prompt_input, prompt_template)
   fail_safe = get_fail_safe()
@@ -361,22 +391,31 @@ def run_gpt_prompt_task_decomp(persona,
     print (gpt_response)
     print ("-==- -==- -==- ")
 
-    # TODO SOMETHING HERE sometimes fails... See screenshot
-    temp = [i.strip() for i in gpt_response.split("\n")]
-    _cr = []
+    # Robust parsing to handle conversational filler from local LLMs
     cr = []
-    for count, i in enumerate(temp): 
-      if count != 0: 
-        _cr += [" ".join([j.strip () for j in i.split(" ")][3:])]
-      else: 
-        _cr += [i]
-    for count, i in enumerate(_cr): 
-      k = [j.strip() for j in i.split("(duration in minutes:")]
-      task = k[0]
-      if task[-1] == ".": 
+    for line in gpt_response.split("\n"):
+      line = line.strip()
+      if not line or "(duration in minutes:" not in line:
+        continue
+      
+      # Extract task and duration
+      parts = line.split("(duration in minutes:")
+      task = parts[0].strip()
+      
+      # Strip leading "1) Isabella is " or "1) "
+      import re
+      task = re.sub(r'^\d+\)\s*\w+\s+is\s+', '', task)
+      task = re.sub(r'^\d+\)\s*', '', task)
+      
+      if task and task[-1] == ".": 
         task = task[:-1]
-      duration = int(k[1].split(",")[0].strip())
-      cr += [[task, duration]]
+        
+      try:
+        duration_str = parts[1].split(",")[0].strip()
+        duration = int(duration_str)
+        cr += [[task, duration]]
+      except:
+        pass
 
     total_expected_min = int(prompt.split("(total duration in minutes")[-1]
                                    .split("):")[0].strip())
@@ -414,13 +453,11 @@ def run_gpt_prompt_task_decomp(persona,
     return cr
 
   def __func_validate(gpt_response, prompt=""): 
-    # TODO -- this sometimes generates error 
     try: 
-      __func_clean_up(gpt_response)
+      __func_clean_up(gpt_response, prompt)
+      return True
     except: 
-      pass
-      # return False
-    return gpt_response
+      return False
 
   def get_fail_safe(): 
     fs = ["asleep"]
@@ -429,7 +466,9 @@ def run_gpt_prompt_task_decomp(persona,
   gpt_param = {"engine": "text-davinci-003", "max_tokens": 1000, 
              "temperature": 0, "top_p": 1, "stream": False,
              "frequency_penalty": 0, "presence_penalty": 0, "stop": None}
-  prompt_template = "persona/prompt_template/v2/task_decomp_v3.txt"
+  prompt_template = _get_template(
+    "persona/prompt_template/v2/task_decomp_v3.txt",
+    "persona/prompt_template/v_travian/task_decomp_v3.txt")
   prompt_input = create_prompt_input(persona, task, duration)
   prompt = generate_prompt(prompt_input, prompt_template)
   fail_safe = get_fail_safe()
@@ -683,7 +722,9 @@ def run_gpt_prompt_action_arena(action_description,
     return prompt_input
 
   def __func_clean_up(gpt_response, prompt=""):
-    cleaned_response = gpt_response.split("}")[0]
+    cleaned_response = gpt_response.split("}")[0].strip()
+    if cleaned_response.startswith("{"):
+        cleaned_response = cleaned_response[1:].strip()
     return cleaned_response
 
   def __func_validate(gpt_response, prompt=""): 
@@ -828,7 +869,9 @@ def run_gpt_prompt_pronunciatio(action_description, persona, verbose=False):
   gpt_param = {"engine": "text-davinci-002", "max_tokens": 15, 
                "temperature": 0, "top_p": 1, "stream": False,
                "frequency_penalty": 0, "presence_penalty": 0, "stop": None}
-  prompt_template = "persona/prompt_template/v3_ChatGPT/generate_pronunciatio_v1.txt" ########
+  prompt_template = _get_template(
+    "persona/prompt_template/v3_ChatGPT/generate_pronunciatio_v1.txt",
+    "persona/prompt_template/v_travian/generate_pronunciatio_v1.txt")  ########
   prompt_input = create_prompt_input(action_description)  ########
   prompt = generate_prompt(prompt_input, prompt_template)
   example_output = "🛁🧖‍♀️" ########
@@ -1323,7 +1366,9 @@ def run_gpt_prompt_decide_to_talk(persona, target_persona, retrieved,test_input=
   gpt_param = {"engine": "text-davinci-003", "max_tokens": 20, 
                "temperature": 0, "top_p": 1, "stream": False,
                "frequency_penalty": 0, "presence_penalty": 0, "stop": None}
-  prompt_template = "persona/prompt_template/v2/decide_to_talk_v2.txt"
+  prompt_template = _get_template(
+    "persona/prompt_template/v2/decide_to_talk_v2.txt",
+    "persona/prompt_template/v_travian/decide_to_talk_v2.txt")
   prompt_input = create_prompt_input(persona, target_persona, retrieved,
                                      test_input)
   prompt = generate_prompt(prompt_input, prompt_template)

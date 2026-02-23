@@ -106,30 +106,44 @@ def run_reflect(persona):
   Output: 
     None
   """
+  print(f"[DEBUG] run_reflect started for {persona.scratch.name}")
   # Reflection requires certain focal points. Generate that first. 
+  print(f"[DEBUG] Generating focal points for {persona.scratch.name}")
   focal_points = generate_focal_points(persona, 3)
+  print(f"[DEBUG] Focal points generated: {focal_points}")
+  
   # Retrieve the relevant Nodes object for each of the focal points. 
   # <retrieved> has keys of focal points, and values of the associated Nodes. 
+  print(f"[DEBUG] Retrieving nodes for focal points")
   retrieved = new_retrieve(persona, focal_points)
+  print(f"[DEBUG] Nodes retrieved")
 
   # For each of the focal points, generate thoughts and save it in the 
   # agent's memory. 
   for focal_pt, nodes in retrieved.items(): 
+    print(f"[DEBUG] Processing focal point: {focal_pt}")
     xx = [i.embedding_key for i in nodes]
     for xxx in xx: print (xxx)
 
+    print(f"[DEBUG] Generating insights and evidence for focal point")
     thoughts = generate_insights_and_evidence(persona, nodes, 5)
+    print(f"[DEBUG] Insights generated: {thoughts}")
     for thought, evidence in thoughts.items(): 
+      print(f"[DEBUG] Processing thought: {thought}")
       created = persona.scratch.curr_time
       expiration = persona.scratch.curr_time + datetime.timedelta(days=30)
       s, p, o = generate_action_event_triple(thought, persona)
       keywords = set([s, p, o])
+      print(f"[DEBUG] Generating poignancy score for thought")
       thought_poignancy = generate_poig_score(persona, "thought", thought)
+      print(f"[DEBUG] Getting embedding for thought")
       thought_embedding_pair = (thought, get_embedding(thought))
 
+      print(f"[DEBUG] Adding thought to memory")
       persona.a_mem.add_thought(created, expiration, s, p, o, 
                                 thought, keywords, thought_poignancy, 
                                 thought_embedding_pair, evidence)
+  print(f"[DEBUG] run_reflect finished for {persona.scratch.name}")
 
 
 def reflection_trigger(persona): 

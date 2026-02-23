@@ -1,0 +1,7 @@
+{
+ "world_name": "travian hq",
+ "maze_width": 60,
+ "maze_height": 50,
+ "sq_tile_size": 32,
+ "special_constraint": ""
+}

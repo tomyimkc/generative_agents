@@ -56,7 +56,12 @@
 	  scene: {
 	    preload: preload,
 	    create: create,
-	    update: update } };
+	    update: update },
+	  scale: {
+	    mode: Phaser.Scale.FIT,
+	    autoCenter: Phaser.Scale.CENTER_BOTH
+	  }
+	};
 
 	// const config = {
 	//   type: Phaser.AUTO,
@@ -80,6 +85,7 @@
 	let cursors;
 	let player;
 	let showDebug = false;
+	let origDragPoint = null;
 
 	// Persona related variables. This should have the name of the persona as its 
 	// keys, and the instances of the Persona class as the values.
@@ -266,15 +272,25 @@
 	  // The image  used for the sprite has a bit of whitespace, so I'm using 
 	  // setSize & setOffset to control the size of the player's body.
 	  player = this.physics.add.
-	                sprite(800, 288, "atlas", "misa-front").
+	                sprite(3824, 1504, "atlas", "misa-front").
 	                setSize(30, 40).
 	                setOffset(0, 0);
 	  player.setDepth(-1);
 	  // Setting up the camera. 
 	  const camera = this.cameras.main;
 	  camera.startFollow(player);
+	  // Restrict camera to the entire map so we can zoom out
 	  camera.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+	  camera.setZoom(1.0); // Zoom out to see the bigger picture
 	  cursors = this.input.keyboard.createCursorKeys();
+
+	  // *** SET UP MOUSE ZOOM ***
+	  this.input.on('wheel', function (pointer, gameObjects, deltaX, deltaY, deltaZ) {
+	      camera.zoom -= deltaY * 0.005;
+	      // Min zoom to prevent zooming out too far
+	      if (camera.zoom < 0.5) camera.zoom = 0.5;
+	      if (camera.zoom > 10) camera.zoom = 10;
+	  });
 
 	  // *** SET UP PERSONAS *** 
 	  // We start by creating the game sprite objects. 
@@ -363,6 +379,29 @@
 	  } 
 	  if (cursors.down.isDown) {
 	    player.body.setVelocityY(camera_speed);
+	  }
+	  
+	  // Clamp player to a wider area around the Dorm so they can see the neighborhood
+	  if (player.x < 2000) player.x = 2000;
+	  if (player.x > 4480) player.x = 4480;
+	  if (player.y < 500) player.y = 500;
+	  if (player.y > 3000) player.y = 3000;
+
+	  // *** MOUSE DRAG CAMERA ***
+	  if (this.input.activePointer.isDown) {
+	    if (origDragPoint) {
+	      player.x += (origDragPoint.x - this.input.activePointer.position.x) / this.cameras.main.zoom;
+	      player.y += (origDragPoint.y - this.input.activePointer.position.y) / this.cameras.main.zoom;
+	      
+	      // Clamp player to apartment bounds so camera doesn't get detached
+	      if (player.x < 3360) player.x = 3360;
+	      if (player.x > 4288) player.x = 4288;
+	      if (player.y < 992) player.y = 992;
+	      if (player.y > 2016) player.y = 2016;
+	    }
+	    origDragPoint = this.input.activePointer.position.clone();
+	  } else {
+	    origDragPoint = null;
 	  }
 
 	  // console.log("phase: " + phase + ", step: " + step);
