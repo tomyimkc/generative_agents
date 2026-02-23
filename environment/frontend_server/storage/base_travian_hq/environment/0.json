@@ -1,0 +1,47 @@
+{
+  "Commander Marcus": {
+    "maze": "travian_hq",
+    "x": 10,
+    "y": 7
+  },
+  "Archivist Petra": {
+    "maze": "travian_hq",
+    "x": 10,
+    "y": 31
+  },
+  "Scout Varro": {
+    "maze": "travian_hq",
+    "x": 29,
+    "y": 31
+  },
+  "Treasurer Lucius": {
+    "maze": "travian_hq",
+    "x": 10,
+    "y": 19
+  },
+  "Builder Gaius": {
+    "maze": "travian_hq",
+    "x": 29,
+    "y": 19
+  },
+  "Centurion Titus": {
+    "maze": "travian_hq",
+    "x": 49,
+    "y": 19
+  },
+  "Strategist Livia": {
+    "maze": "travian_hq",
+    "x": 49,
+    "y": 31
+  },
+  "Sentinel Felix": {
+    "maze": "travian_hq",
+    "x": 29,
+    "y": 7
+  },
+  "Validator Quintus": {
+    "maze": "travian_hq",
+    "x": 10,
+    "y": 43
+  }
+}

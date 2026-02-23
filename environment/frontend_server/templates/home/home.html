@@ -5,7 +5,7 @@
 <br>
 <br>
 <div>
-	<div id="game-container" style="text-align: center"></div>
+	<div id="game-container" style="text-align: center; width: 100%; height: 80vh; overflow: hidden; display: flex; justify-content: center; align-items: center;"></div>
 
 	<div style="width:55%; margin: 0 auto; margin-top:4.5em">
 		<h3 style="margin-bottom:-0.5em; font-size:1.5em">Current Time:</h3>
@@ -68,6 +68,106 @@
   
 
 
+
+<!-- ── Travian Bot Status Overlay ── -->
+<div id="travian-status-panel" style="
+  position: fixed; top: 10px; right: 10px; width: 350px; max-height: 90vh;
+  background: rgba(20, 20, 30, 0.92); color: #e0e0e0; border-radius: 10px;
+  padding: 15px; font-family: 'Segoe UI', sans-serif; font-size: 13px;
+  overflow-y: auto; z-index: 9999; border: 1px solid #444;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <h4 style="margin: 0; color: #ffd700; font-size: 15px;">&#9876; Travian Bot HQ</h4>
+    <span id="travian-status-indicator" style="padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #555;">offline</span>
+  </div>
+
+  <div style="margin-bottom: 8px;">
+    <strong>Phase:</strong> <span id="travian-phase" style="color: #87ceeb;">--</span>
+  </div>
+  <div style="margin-bottom: 12px;">
+    <strong>Loop:</strong> <span id="travian-loop">--</span>
+  </div>
+
+  <div style="margin-bottom: 8px;">
+    <strong style="color: #ffd700;">Villages</strong>
+    <div id="travian-villages" style="margin-top: 4px; font-size: 12px; max-height: 150px; overflow-y: auto;">
+      <em style="color: #888;">Waiting for data...</em>
+    </div>
+  </div>
+
+  <div>
+    <strong style="color: #ffd700;">Recent Events</strong>
+    <div id="travian-events" style="margin-top: 4px; font-size: 11px; max-height: 200px; overflow-y: auto;">
+      <em style="color: #888;">No events yet</em>
+    </div>
+  </div>
+</div>
+
+<script>
+(function pollTravianState() {
+  function update() {
+    fetch('/api/travian_state/')
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('travian-status-indicator').textContent = 'offline';
+          document.getElementById('travian-status-indicator').style.background = '#555';
+          return;
+        }
+        const meta = data.meta || {};
+        const running = meta.running;
+        const indicator = document.getElementById('travian-status-indicator');
+        indicator.textContent = running ? 'LIVE' : 'idle';
+        indicator.style.background = running ? '#28a745' : '#dc3545';
+        document.getElementById('travian-phase').textContent = meta.phase || '--';
+        document.getElementById('travian-loop').textContent = meta.loop_iteration || '0';
+
+        const villages = data.villages || {};
+        const vkeys = Object.keys(villages);
+        if (vkeys.length > 0) {
+          let html = '<table style="width:100%; border-collapse: collapse;">';
+          html += '<tr style="color:#aaa; font-size:10px;"><th>Name</th><th>Type</th><th>L</th><th>C</th><th>I</th><th>Cr</th></tr>';
+          vkeys.slice(0, 10).forEach(vid => {
+            const v = villages[vid];
+            const r = v.resources || {};
+            html += '<tr style="border-top: 1px solid #333;">';
+            html += '<td style="padding:2px 4px;">' + (v.name || vid) + '</td>';
+            html += '<td style="color:#888;">' + (v.type || '?') + '</td>';
+            html += '<td>' + (r.lumber || '-') + '</td>';
+            html += '<td>' + (r.clay || '-') + '</td>';
+            html += '<td>' + (r.iron || '-') + '</td>';
+            html += '<td>' + (r.crop || '-') + '</td>';
+            html += '</tr>';
+          });
+          html += '</table>';
+          document.getElementById('travian-villages').innerHTML = html;
+        }
+
+        const events = (data.events || []).slice(-8).reverse();
+        if (events.length > 0) {
+          let html = '';
+          events.forEach(e => {
+            const typeColors = {
+              'resource_send': '#4fc3f7', 'build_start': '#ffb74d',
+              'train_start': '#ef5350', 'dodge_triggered': '#ff1744',
+              'phase_change': '#ce93d8'
+            };
+            const color = typeColors[e.type] || '#aaa';
+            html += '<div style="padding: 3px 0; border-bottom: 1px solid #333;">';
+            html += '<span style="color:' + color + '; font-weight: bold;">[' + (e.type || '?') + ']</span> ';
+            html += (e.message || '').substring(0, 80);
+            html += '</div>';
+          });
+          document.getElementById('travian-events').innerHTML = html;
+        }
+      })
+      .catch(() => {});
+  }
+  update();
+  setInterval(update, 5000);
+})();
+</script>
 
 <div style="padding-bottom:15em"> </div>
 

@@ -1,0 +1,30 @@
+decide_to_talk_v2.txt
+
+Variables:
+!<INPUT 0>! -- Context (recent events and shared memory nodes for both managers)
+!<INPUT 1>! -- Current time (e.g., "February 23, 2026, 09:15:00 AM")
+!<INPUT 2>! -- Initiating manager name (e.g., "ResourceManager")
+!<INPUT 3>! -- Target manager name (e.g., "BuildManager")
+!<INPUT 4>! -- Time of last chat (e.g., "February 23, 2026, 08:00:00 AM")
+!<INPUT 5>! -- Last chat topic (e.g., "lumber shortfall in Axeville delaying the Granary upgrade")
+!<INPUT 6>! -- Initiating manager current action description (e.g., "ResourceManager is monitoring warehouse levels at Axeville and has detected a critical clay deficit")
+!<INPUT 7>! -- Target manager current action description (e.g., "BuildManager is idle, waiting for resources before queuing the next construction task")
+!<INPUT 8>! -- Initiating manager name (repeated for question)
+!<INPUT 9>! -- Target manager name (repeated for question)
+
+<commentblockmarker>###</commentblockmarker>
+Task -- given context about two Travian bot managers, determine whether the initiating manager would flag an inter-manager coordination event (i.e., "talk") with the other manager. Managers communicate when their phases directly interact: ResourceManager talks to BuildManager about resource shortfalls blocking construction; TrainManager talks to ResourceManager about crop deficits blocking troop training; DodgeManager talks to all managers when an incoming attack triggers an emergency phase override.
+Format:
+Context: []
+Question: []
+Reasoning: []
+Answer in yes or no: []
+---
+Context: !<INPUT 0>!
+Right now, it is !<INPUT 1>!. !<INPUT 2>! and !<INPUT 3>! last coordinated at !<INPUT 4>! about !<INPUT 5>!.
+!<INPUT 6>!
+!<INPUT 7>!
+
+Question: Would !<INPUT 8>! flag a coordination event with !<INPUT 9>!?
+
+Reasoning: Let's think step by step. Consider whether the initiating manager's current phase output (e.g., a resource transfer, a build trigger, an attack alert) directly affects the target manager's active or upcoming phase. Managers should coordinate when one's phase output is a prerequisite for or disrupts the other's phase.

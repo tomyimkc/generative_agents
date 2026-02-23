@@ -17,6 +17,8 @@ from persona.cognitive_modules.retrieve import *
 from persona.cognitive_modules.converse import *
 
 ##############################################################################
+# Global toggle: keep agents always awake
+ALWAYS_AWAKE = True
 # CHAPTER 2: Generate
 ##############################################################################
 
@@ -34,8 +36,8 @@ def generate_wake_up_hour(persona):
   EXAMPLE OUTPUT: 
     8
   """
-  if debug: print ("GNS FUNCTION: <generate_wake_up_hour>")
-  return int(run_gpt_prompt_wake_up_hour(persona)[0])
+  if debug: print ("GNS FUNCTION: <generate_wake_up_hour> (MOCKED FOR SPEED)")
+  return 8
 
 
 def generate_first_daily_plan(persona, wake_up_hour): 
@@ -64,8 +66,8 @@ def generate_first_daily_plan(persona, wake_up_hour):
      'work on painting project from 4:00 pm to 6:00 pm', 
      'have dinner at 6:00 pm', 'watch TV from 7:00 pm to 8:00 pm']
   """
-  if debug: print ("GNS FUNCTION: <generate_first_daily_plan>")
-  return run_gpt_prompt_daily_plan(persona, wake_up_hour)[0]
+  if debug: print ("GNS FUNCTION: <generate_first_daily_plan> (MOCKED FOR SPEED)")
+  return ["idling around"]
 
 
 def generate_hourly_schedule(persona, wake_up_hour): 
@@ -87,56 +89,8 @@ def generate_hourly_schedule(persona, wake_up_hour):
     [['sleeping', 360], ['waking up and starting her morning routine', 60], 
      ['eating breakfast', 60],..
   """
-  if debug: print ("GNS FUNCTION: <generate_hourly_schedule>")
-
-  hour_str = ["00:00 AM", "01:00 AM", "02:00 AM", "03:00 AM", "04:00 AM", 
-              "05:00 AM", "06:00 AM", "07:00 AM", "08:00 AM", "09:00 AM", 
-              "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM", "02:00 PM", 
-              "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM",
-              "08:00 PM", "09:00 PM", "10:00 PM", "11:00 PM"]
-  n_m1_activity = []
-  diversity_repeat_count = 3
-  for i in range(diversity_repeat_count): 
-    n_m1_activity_set = set(n_m1_activity)
-    if len(n_m1_activity_set) < 5: 
-      n_m1_activity = []
-      for count, curr_hour_str in enumerate(hour_str): 
-        if wake_up_hour > 0: 
-          n_m1_activity += ["sleeping"]
-          wake_up_hour -= 1
-        else: 
-          n_m1_activity += [run_gpt_prompt_generate_hourly_schedule(
-                          persona, curr_hour_str, n_m1_activity, hour_str)[0]]
-  
-  # Step 1. Compressing the hourly schedule to the following format: 
-  # The integer indicates the number of hours. They should add up to 24. 
-  # [['sleeping', 6], ['waking up and starting her morning routine', 1], 
-  # ['eating breakfast', 1], ['getting ready for the day', 1], 
-  # ['working on her painting', 2], ['taking a break', 1], 
-  # ['having lunch', 1], ['working on her painting', 3], 
-  # ['taking a break', 2], ['working on her painting', 2], 
-  # ['relaxing and watching TV', 1], ['going to bed', 1], ['sleeping', 2]]
-  _n_m1_hourly_compressed = []
-  prev = None 
-  prev_count = 0
-  for i in n_m1_activity: 
-    if i != prev:
-      prev_count = 1 
-      _n_m1_hourly_compressed += [[i, prev_count]]
-      prev = i
-    else: 
-      if _n_m1_hourly_compressed: 
-        _n_m1_hourly_compressed[-1][1] += 1
-
-  # Step 2. Expand to min scale (from hour scale)
-  # [['sleeping', 360], ['waking up and starting her morning routine', 60], 
-  # ['eating breakfast', 60],..
-  n_m1_hourly_compressed = []
-  for task, duration in _n_m1_hourly_compressed: 
-    n_m1_hourly_compressed += [[task, duration*60]]
-
-  return n_m1_hourly_compressed
-
+  if debug: print ("GNS FUNCTION: <generate_hourly_schedule> (MOCKED FOR SPEED)")
+  return [["idling", 1440]]
 
 def generate_task_decomp(persona, task, duration): 
   """
@@ -160,8 +114,8 @@ def generate_task_decomp(persona, task, duration):
      ['starting to work on her painting', 15]] 
 
   """
-  if debug: print ("GNS FUNCTION: <generate_task_decomp>")
-  return run_gpt_prompt_task_decomp(persona, task, duration)[0]
+  if debug: print ("GNS FUNCTION: <generate_task_decomp> (MOCKED FOR SPEED)")
+  return [[task, duration]]
 
 
 def generate_action_sector(act_desp, persona, maze): 
@@ -610,12 +564,19 @@ def _determine_action(persona, maze):
 
   if 1440 - x_emergency > 0: 
     print ("x_emergency__AAA", x_emergency)
-  persona.scratch.f_daily_schedule += [["sleeping", 1440 - x_emergency]]
+  persona.scratch.f_daily_schedule += [["idling", 1440 - x_emergency]]
   
 
 
 
   act_desp, act_dura = persona.scratch.f_daily_schedule[curr_index] 
+
+  # Force agents to never sleep (always-on mode)
+  if ALWAYS_AWAKE:
+    lowered = act_desp.lower()
+    if "sleep" in lowered or "bed" in lowered or "asleep" in lowered:
+      act_desp = "working on tasks"
+      persona.scratch.f_daily_schedule[curr_index] = [act_desp, act_dura]
 
 
 

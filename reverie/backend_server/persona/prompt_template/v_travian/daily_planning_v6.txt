@@ -1,0 +1,14 @@
+daily_planning_v6.txt
+
+Variables:
+!<INPUT 0>! -- Commonset (agent identity: name, role, village, personality)
+!<INPUT 1>! -- Lifestyle (e.g., "ResourceManager monitors lumber, clay, iron, and crop levels and triggers inter-village transfers when reserves fall below thresholds")
+!<INPUT 2>! -- Reverie date time now (e.g., "Monday February 23, 2026")
+!<INPUT 3>! -- Persona first name (manager name, e.g., "ResourceManager")
+!<INPUT 4>! -- wake_up_hour (e.g., "06:00 am" — the hour the bot loop starts for the day)
+
+<commentblockmarker>###</commentblockmarker>
+!<INPUT 0>!
+
+As a Travian bot manager, !<INPUT 1>!
+Today is !<INPUT 2>!. Here is !<INPUT 3>!'s operational schedule today across the 14-phase bot cycle (with phase timing, e.g., run preflight scan at 06:00 am, execute resource transfers from 07:00 am to 08:00 am): 1) initialize browser session and run preflight stats scan at !<INPUT 4>!, 2)

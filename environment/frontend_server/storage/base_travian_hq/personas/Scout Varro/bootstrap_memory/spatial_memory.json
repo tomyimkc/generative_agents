@@ -1,0 +1,72 @@
+{
+  "travian hq": {
+    "Command Center": {
+      "Strategy Hall": [
+        "command_chair",
+        "phase_board",
+        "village_map"
+      ],
+      "War Room": [
+        "war_table",
+        "threat_board",
+        "alarm_bell"
+      ],
+      "Briefing Room": [
+        "briefing_table",
+        "projection_screen"
+      ]
+    },
+    "Economic Wing": {
+      "Treasury": [
+        "resource_ledger",
+        "merchant_desk",
+        "gold_vault"
+      ],
+      "Construction Yard": [
+        "blueprint_table",
+        "building_queue_board",
+        "tool_rack"
+      ],
+      "Training Grounds": [
+        "training_dummy",
+        "barracks_desk",
+        "troop_roster"
+      ]
+    },
+    "Intelligence Wing": {
+      "Archives": [
+        "config_scroll",
+        "village_registry",
+        "profile_cabinet"
+      ],
+      "Scout Tower": [
+        "telescope",
+        "statistics_board",
+        "resource_scanner"
+      ]
+    },
+    "Operations Wing": {
+      "Focus Chamber": [
+        "focus_crystal",
+        "plan_board",
+        "priority_list"
+      ],
+      "Logic Lab": [
+        "validation_orb",
+        "rule_book"
+      ]
+    },
+    "Commons": {
+      "Mess Hall": [
+        "dining_table",
+        "food_counter",
+        "notice_board"
+      ],
+      "Courtyard": [
+        "fountain",
+        "bench",
+        "garden"
+      ]
+    }
+  }
+}

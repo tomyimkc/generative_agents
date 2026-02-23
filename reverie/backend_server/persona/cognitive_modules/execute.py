@@ -42,9 +42,6 @@ def execute(persona, maze, personas, plan):
     # to execute the current action. The goal is to pick one of them.
     target_tiles = None
 
-    print ('aldhfoaf/????')
-    print (plan)
-
     if "<persona>" in plan: 
       # Executing persona-persona interaction.
       target_p_tile = (personas[plan.split("<persona>")[-1].strip()]
@@ -89,7 +86,8 @@ def execute(persona, maze, personas, plan):
       # string form. <maze.address_tiles> takes this and returns candidate 
       # coordinates. 
       if plan not in maze.address_tiles: 
-        maze.address_tiles["Johnson Park:park:park garden"] #ERRORRRRRRR
+        print(f"ERROR: Plan {plan} not found in maze.address_tiles. Defaulting to current tile.")
+        target_tiles = [persona.scratch.curr_tile]
       else: 
         target_tiles = maze.address_tiles[plan]
 
